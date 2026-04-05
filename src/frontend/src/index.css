@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* AssetFlow Dark Fintech Palette */
+    /* Background: near-black #0B0F10 -> oklch(0.13 0.008 200) */
+    --background: 0.13 0.008 200;
+    /* Foreground: #F2F5F6 -> oklch(0.965 0.005 200) */
+    --foreground: 0.965 0.005 200;
+    /* Card: #171D1F -> oklch(0.175 0.01 200) */
+    --card: 0.175 0.012 200;
+    --card-foreground: 0.965 0.005 200;
+    /* Popover: #1C2325 -> oklch(0.2 0.012 200) */
+    --popover: 0.2 0.012 200;
+    --popover-foreground: 0.965 0.005 200;
+    /* Primary accent green: #22C55E -> oklch(0.723 0.2 149) */
+    --primary: 0.723 0.2 149;
+    --primary-foreground: 0.13 0.008 200;
+    /* Secondary: dark surface */
+    --secondary: 0.22 0.013 200;
+    --secondary-foreground: 0.965 0.005 200;
+    /* Muted: #111718 -> oklch(0.155 0.008 200) */
+    --muted: 0.155 0.008 200;
+    /* Muted foreground: #A7B0B4 -> oklch(0.72 0.015 200) */
+    --muted-foreground: 0.72 0.015 200;
+    /* Accent: emerald highlight */
+    --accent: 0.82 0.17 149;
+    --accent-foreground: 0.13 0.008 200;
+    /* Destructive */
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+    /* Border: #263033 -> oklch(0.235 0.015 200) */
+    --border: 0.235 0.015 200;
+    /* Input: dark with subtle tint */
+    --input: 0.22 0.013 200;
+    /* Ring: green focus glow */
+    --ring: 0.723 0.2 149;
+    /* Charts */
+    --chart-1: 0.723 0.2 149;
+    --chart-2: 0.82 0.17 149;
+    --chart-3: 0.6 0.15 200;
+    --chart-4: 0.75 0.18 100;
+    --chart-5: 0.65 0.22 170;
+    /* Sidebar */
+    --sidebar: 0.155 0.008 200;
+    --sidebar-foreground: 0.965 0.005 200;
+    --sidebar-primary: 0.723 0.2 149;
+    --sidebar-primary-foreground: 0.13 0.008 200;
+    --sidebar-accent: 0.22 0.013 200;
+    --sidebar-accent-foreground: 0.965 0.005 200;
+    --sidebar-border: 0.235 0.015 200;
+    --sidebar-ring: 0.723 0.2 149;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .glow-green {
+    box-shadow: 0 0 20px oklch(0.723 0.2 149 / 0.35), 0 0 40px
+      oklch(0.723 0.2 149 / 0.15);
+  }
+  .glow-green-text {
+    text-shadow: 0 0 20px oklch(0.723 0.2 149 / 0.6);
+  }
+  .glow-green-sm {
+    box-shadow: 0 0 8px oklch(0.723 0.2 149 / 0.4);
+  }
+  .border-gradient {
+    border: 1px solid oklch(0.235 0.015 200);
+  }
+  .input-dark {
+    background: oklch(0.2 0.012 200);
+    border: 1px solid oklch(0.235 0.015 200);
+    color: oklch(0.965 0.005 200);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-dark:focus {
+    border-color: oklch(0.723 0.2 149);
+    box-shadow: 0 0 0 3px oklch(0.723 0.2 149 / 0.2);
+    outline: none;
+  }
+  .input-dark::placeholder {
+    color: oklch(0.55 0.01 200);
+  }
+}
