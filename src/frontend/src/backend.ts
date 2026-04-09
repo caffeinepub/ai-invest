@@ -106,6 +106,14 @@ export interface TransformationOutput {
     headers: Array<http_header>;
 }
 export type Time = bigint;
+export interface DailyInsight {
+    ticker: string;
+    fetchedAt: bigint;
+    name: string;
+    cachedDate: string;
+    riskLevel: string;
+    reason: string;
+}
 export interface TransformationInput {
     context: Uint8Array;
     response: http_request_result;
@@ -121,6 +129,7 @@ export interface Asset {
 export interface PortfolioEntry {
     id: bigint;
     stockName: string;
+    sector: string;
     addedAt: Time;
     buyPrice: number;
     quantity: number;
@@ -138,55 +147,59 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
-    addInvestment(stockName: string, quantity: number, buyPrice: number): Promise<PortfolioEntry>;
+    _initializeAccessControl(): Promise<void>;
+    addInvestment(stockName: string, quantity: number, buyPrice: number, sector: string): Promise<PortfolioEntry>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    clearManualPrice(ticker: string): Promise<void>;
     clearQueryHistory(): Promise<boolean>;
     deleteInvestment(id: bigint): Promise<boolean>;
     deleteQuery(timestamp: Time): Promise<boolean>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getDailyInsight(): Promise<DailyInsight>;
     getInvestmentSuggestions(budget: number, riskLevel: string): Promise<Array<Asset>>;
     getInvestments(): Promise<Array<PortfolioEntry>>;
+    getManualPrice(ticker: string): Promise<number | null>;
     getQueries(numQueries: bigint): Promise<Array<Query>>;
     getQueryHistory(): Promise<Array<Query>>;
     getStockPrice(ticker: string): Promise<number>;
-    clearManualPrice(ticker: string): Promise<void>;
-    getManualPrice(ticker: string): Promise<number | null>;
-    saveManualPrice(ticker: string, price: number): Promise<void>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    refreshDailyInsight(): Promise<DailyInsight>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    saveManualPrice(ticker: string, price: number): Promise<void>;
+    suggestSector(ticker: string): Promise<string>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
+    transformDailyInsight(input: TransformationInput): Promise<TransformationOutput>;
 }
 import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
-    async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
+    async _initializeAccessControl(): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor._initializeAccessControlWithSecret(arg0);
+                const result = await this.actor._initializeAccessControl();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._initializeAccessControlWithSecret(arg0);
+            const result = await this.actor._initializeAccessControl();
             return result;
         }
     }
-    async addInvestment(arg0: string, arg1: number, arg2: number): Promise<PortfolioEntry> {
+    async addInvestment(arg0: string, arg1: number, arg2: number, arg3: string): Promise<PortfolioEntry> {
         if (this.processError) {
             try {
-                const result = await this.actor.addInvestment(arg0, arg1, arg2);
+                const result = await this.actor.addInvestment(arg0, arg1, arg2, arg3);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addInvestment(arg0, arg1, arg2);
+            const result = await this.actor.addInvestment(arg0, arg1, arg2, arg3);
             return result;
         }
     }
@@ -201,6 +214,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async clearManualPrice(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.clearManualPrice(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.clearManualPrice(arg0);
             return result;
         }
     }
@@ -274,6 +301,20 @@ export class Backend implements backendInterface {
             return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getDailyInsight(): Promise<DailyInsight> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getDailyInsight();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getDailyInsight();
+            return result;
+        }
+    }
     async getInvestmentSuggestions(arg0: number, arg1: string): Promise<Array<Asset>> {
         if (this.processError) {
             try {
@@ -300,6 +341,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getInvestments();
             return result;
+        }
+    }
+    async getManualPrice(arg0: string): Promise<number | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getManualPrice(arg0);
+                return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getManualPrice(arg0);
+            return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
         }
     }
     async getQueries(arg0: bigint): Promise<Array<Query>> {
@@ -372,6 +427,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async refreshDailyInsight(): Promise<DailyInsight> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.refreshDailyInsight();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.refreshDailyInsight();
+            return result;
+        }
+    }
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
@@ -383,6 +452,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async saveManualPrice(arg0: string, arg1: number): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveManualPrice(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveManualPrice(arg0, arg1);
+            return result;
+        }
+    }
+    async suggestSector(arg0: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.suggestSector(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.suggestSector(arg0);
             return result;
         }
     }
@@ -400,45 +497,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async clearManualPrice(arg0: string): Promise<void> {
+    async transformDailyInsight(arg0: TransformationInput): Promise<TransformationOutput> {
         if (this.processError) {
             try {
-                const result = await this.actor.clearManualPrice(arg0);
+                const result = await this.actor.transformDailyInsight(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.clearManualPrice(arg0);
-            return result;
-        }
-    }
-    async getManualPrice(arg0: string): Promise<number | null> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getManualPrice(arg0);
-                return result.length === 0 ? null : result[0];
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getManualPrice(arg0);
-            return result.length === 0 ? null : result[0];
-        }
-    }
-    async saveManualPrice(arg0: string, arg1: number): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.saveManualPrice(arg0, arg1);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.saveManualPrice(arg0, arg1);
+            const result = await this.actor.transformDailyInsight(arg0);
             return result;
         }
     }
@@ -447,6 +516,9 @@ function from_candid_UserRole_n4(_uploadFile: (file: ExternalBlob) => Promise<Ui
     return from_candid_variant_n5(_uploadFile, _downloadFile, value);
 }
 function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [number]): number | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {

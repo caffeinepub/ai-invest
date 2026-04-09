@@ -12,6 +12,7 @@ export const Time = IDL.Int;
 export const PortfolioEntry = IDL.Record({
   'id' : IDL.Nat,
   'stockName' : IDL.Text,
+  'sector' : IDL.Text,
   'addedAt' : Time,
   'buyPrice' : IDL.Float64,
   'quantity' : IDL.Float64,
@@ -22,6 +23,14 @@ export const UserRole = IDL.Variant({
   'guest' : IDL.Null,
 });
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
+export const DailyInsight = IDL.Record({
+  'ticker' : IDL.Text,
+  'fetchedAt' : IDL.Int,
+  'name' : IDL.Text,
+  'cachedDate' : IDL.Text,
+  'riskLevel' : IDL.Text,
+  'reason' : IDL.Text,
+});
 export const Asset = IDL.Record({
   'ticker' : IDL.Text,
   'name' : IDL.Text,
@@ -56,34 +65,46 @@ export const TransformationOutput = IDL.Record({
 });
 
 export const idlService = IDL.Service({
-  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  '_initializeAccessControl' : IDL.Func([], [], []),
   'addInvestment' : IDL.Func(
-      [IDL.Text, IDL.Float64, IDL.Float64],
+      [IDL.Text, IDL.Float64, IDL.Float64, IDL.Text],
       [PortfolioEntry],
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'clearManualPrice' : IDL.Func([IDL.Text], [], []),
   'clearQueryHistory' : IDL.Func([], [IDL.Bool], []),
   'deleteInvestment' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'deleteQuery' : IDL.Func([Time], [IDL.Bool], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getDailyInsight' : IDL.Func([], [DailyInsight], []),
   'getInvestmentSuggestions' : IDL.Func(
       [IDL.Float64, IDL.Text],
       [IDL.Vec(Asset)],
       [],
     ),
   'getInvestments' : IDL.Func([], [IDL.Vec(PortfolioEntry)], ['query']),
+  'getManualPrice' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Float64)], ['query']),
   'getQueries' : IDL.Func([IDL.Nat], [IDL.Vec(Query)], ['query']),
   'getQueryHistory' : IDL.Func([], [IDL.Vec(Query)], ['query']),
+  'getStockPrice' : IDL.Func([IDL.Text], [IDL.Float64], []),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'refreshDailyInsight' : IDL.Func([], [DailyInsight], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'saveManualPrice' : IDL.Func([IDL.Text, IDL.Float64], [], []),
+  'suggestSector' : IDL.Func([IDL.Text], [IDL.Text], ['query']),
   'transform' : IDL.Func(
+      [TransformationInput],
+      [TransformationOutput],
+      ['query'],
+    ),
+  'transformDailyInsight' : IDL.Func(
       [TransformationInput],
       [TransformationOutput],
       ['query'],
@@ -97,6 +118,7 @@ export const idlFactory = ({ IDL }) => {
   const PortfolioEntry = IDL.Record({
     'id' : IDL.Nat,
     'stockName' : IDL.Text,
+    'sector' : IDL.Text,
     'addedAt' : Time,
     'buyPrice' : IDL.Float64,
     'quantity' : IDL.Float64,
@@ -107,6 +129,14 @@ export const idlFactory = ({ IDL }) => {
     'guest' : IDL.Null,
   });
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
+  const DailyInsight = IDL.Record({
+    'ticker' : IDL.Text,
+    'fetchedAt' : IDL.Int,
+    'name' : IDL.Text,
+    'cachedDate' : IDL.Text,
+    'riskLevel' : IDL.Text,
+    'reason' : IDL.Text,
+  });
   const Asset = IDL.Record({
     'ticker' : IDL.Text,
     'name' : IDL.Text,
@@ -138,34 +168,46 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
-    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    '_initializeAccessControl' : IDL.Func([], [], []),
     'addInvestment' : IDL.Func(
-        [IDL.Text, IDL.Float64, IDL.Float64],
+        [IDL.Text, IDL.Float64, IDL.Float64, IDL.Text],
         [PortfolioEntry],
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'clearManualPrice' : IDL.Func([IDL.Text], [], []),
     'clearQueryHistory' : IDL.Func([], [IDL.Bool], []),
     'deleteInvestment' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'deleteQuery' : IDL.Func([Time], [IDL.Bool], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getDailyInsight' : IDL.Func([], [DailyInsight], []),
     'getInvestmentSuggestions' : IDL.Func(
         [IDL.Float64, IDL.Text],
         [IDL.Vec(Asset)],
         [],
       ),
     'getInvestments' : IDL.Func([], [IDL.Vec(PortfolioEntry)], ['query']),
+    'getManualPrice' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Float64)], ['query']),
     'getQueries' : IDL.Func([IDL.Nat], [IDL.Vec(Query)], ['query']),
     'getQueryHistory' : IDL.Func([], [IDL.Vec(Query)], ['query']),
+    'getStockPrice' : IDL.Func([IDL.Text], [IDL.Float64], []),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'refreshDailyInsight' : IDL.Func([], [DailyInsight], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'saveManualPrice' : IDL.Func([IDL.Text, IDL.Float64], [], []),
+    'suggestSector' : IDL.Func([IDL.Text], [IDL.Text], ['query']),
     'transform' : IDL.Func(
+        [TransformationInput],
+        [TransformationOutput],
+        ['query'],
+      ),
+    'transformDailyInsight' : IDL.Func(
         [TransformationInput],
         [TransformationOutput],
         ['query'],

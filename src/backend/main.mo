@@ -12,13 +12,15 @@ import Order "mo:core/Order";
 import Char "mo:core/Char";
 import Nat32 "mo:core/Nat32";
 
-import OutCall "http-outcalls/outcall";
+import OutCall "mo:caffeineai-http-outcalls/outcall";
 
-import MixinAuthorization "authorization/MixinAuthorization";
-import AccessControl "authorization/access-control";
+import MixinAuthorization "mo:caffeineai-authorization/MixinAuthorization";
+import AccessControl "mo:caffeineai-authorization/access-control";
+
 
 // AI Invest Canister
 // with data migration
+
 
 actor {
   // Authentication system with role-based access control
@@ -66,6 +68,7 @@ actor {
     quantity : Float;
     buyPrice : Float;
     addedAt : Time.Time;
+    sector : Text;
   };
 
   module PortfolioEntry {
@@ -78,7 +81,22 @@ actor {
   let queries = Map.empty<Principal, List.List<Query>>();
   let portfolio = Map.empty<Principal, List.List<PortfolioEntry>>();
 
-  // Manual price overrides: (Principal, ticker) -> price
+  // ─── Daily Insight types & cache ───────────────────────────────────────────
+
+  type DailyInsight = {
+    ticker : Text;
+    name : Text;
+    reason : Text;
+    riskLevel : Text;
+    cachedDate : Text;
+    fetchedAt : Int;
+  };
+
+  // Global daily cache – one insight for the entire calendar day (UTC)
+  var dailyInsightCache : ?DailyInsight = null;
+  var dailyInsightDate : Text = "";
+
+  // ─── Manual price overrides: (Principal, ticker) -> price ──────────────────
   // Key = principalText # "|" # ticker
   let manualPrices = Map.empty<Text, Float>();
 
@@ -170,6 +188,129 @@ actor {
       };
     } catch (_) {
       0.0;
+    };
+  };
+
+  // Strip .NSE or .BSE suffix from a ticker for sector lookup
+  func stripTickerSuffix(ticker : Text) : Text {
+    switch (ticker.stripEnd(#text ".NSE")) {
+      case (?t) { t };
+      case (null) {
+        switch (ticker.stripEnd(#text ".BSE")) {
+          case (?t) { t };
+          case (null) { ticker };
+        };
+      };
+    };
+  };
+
+  // Map a ticker symbol to its market sector
+  // Returns "Other" for unrecognized tickers
+  func lookupSector(base : Text) : Text {
+    switch (base) {
+      // IT
+      case ("TCS") "IT";
+      case ("INFY") "IT";
+      case ("WIPRO") "IT";
+      case ("HCLTECH") "IT";
+      case ("TECHM") "IT";
+      case ("MPHASIS") "IT";
+      case ("LTTS") "IT";
+      case ("PERSISTENT") "IT";
+      case ("COFORGE") "IT";
+      case ("HEXAWARE") "IT";
+      // Banking
+      case ("HDFCBANK") "Banking";
+      case ("ICICIBANK") "Banking";
+      case ("KOTAKBANK") "Banking";
+      case ("SBIN") "Banking";
+      case ("AXISBANK") "Banking";
+      case ("INDUSINDBK") "Banking";
+      case ("BANDHANBNK") "Banking";
+      case ("FEDERALBNK") "Banking";
+      case ("IDFCFIRSTB") "Banking";
+      case ("RBLBANK") "Banking";
+      // Finance
+      case ("BAJFINANCE") "Finance";
+      case ("BAJAJFINSV") "Finance";
+      case ("CHOLAFIN") "Finance";
+      case ("M&MFIN") "Finance";
+      case ("MUTHOOTFIN") "Finance";
+      case ("IIFL") "Finance";
+      case ("LICHOUSFIN") "Finance";
+      // Energy
+      case ("RELIANCE") "Energy";
+      case ("ONGC") "Energy";
+      case ("IOC") "Energy";
+      case ("BPCL") "Energy";
+      case ("HPCL") "Energy";
+      case ("GAIL") "Energy";
+      case ("NTPC") "Energy";
+      case ("POWERGRID") "Energy";
+      case ("ADANIGREEN") "Energy";
+      case ("TATAPOWER") "Energy";
+      // Pharma
+      case ("SUNPHARMA") "Pharma";
+      case ("DRREDDY") "Pharma";
+      case ("CIPLA") "Pharma";
+      case ("DIVISLAB") "Pharma";
+      case ("AUROPHARMA") "Pharma";
+      case ("LUPIN") "Pharma";
+      case ("TORNTPHARM") "Pharma";
+      case ("BIOCON") "Pharma";
+      case ("ALKEM") "Pharma";
+      case ("IPCALAB") "Pharma";
+      // FMCG
+      case ("HINDUNILVR") "FMCG";
+      case ("ITC") "FMCG";
+      case ("NESTLE") "FMCG";
+      case ("BRITANNIA") "FMCG";
+      case ("DABUR") "FMCG";
+      case ("MARICO") "FMCG";
+      case ("EMAMILTD") "FMCG";
+      case ("COLPAL") "FMCG";
+      case ("GODREJCP") "FMCG";
+      case ("TATACONSUM") "FMCG";
+      // Auto
+      case ("MARUTI") "Auto";
+      case ("M&M") "Auto";
+      case ("TATAMOTORS") "Auto";
+      case ("BAJAJ-AUTO") "Auto";
+      case ("HEROMOTOCO") "Auto";
+      case ("EICHERMOT") "Auto";
+      case ("ASHOKLEY") "Auto";
+      case ("TVSMOTOR") "Auto";
+      case ("BOSCHLTD") "Auto";
+      case ("MOTHERSON") "Auto";
+      // Metals
+      case ("TATASTEEL") "Metals";
+      case ("JSWSTEEL") "Metals";
+      case ("HINDALCO") "Metals";
+      case ("VEDL") "Metals";
+      case ("COALINDIA") "Metals";
+      case ("NMDC") "Metals";
+      case ("SAIL") "Metals";
+      case ("JINDALSTEL") "Metals";
+      case ("APL") "Metals";
+      case ("RATNAMANI") "Metals";
+      // Telecom
+      case ("BHARTIARTL") "Telecom";
+      case ("IDEA") "Telecom";
+      case ("TATACOMM") "Telecom";
+      case ("MTNL") "Telecom";
+      // Real Estate
+      case ("DLF") "Real Estate";
+      case ("GODREJPROP") "Real Estate";
+      case ("OBEROIRLTY") "Real Estate";
+      case ("PHOENIXLTD") "Real Estate";
+      case ("PRESTIGE") "Real Estate";
+      // Mutual Fund/ETF
+      case ("NIFTY50") "Mutual Fund/ETF";
+      case ("SENSEX") "Mutual Fund/ETF";
+      case ("GOLDBEES") "Mutual Fund/ETF";
+      case ("JUNIORBEES") "Mutual Fund/ETF";
+      case ("LIQUIDBEES") "Mutual Fund/ETF";
+      case (_) "Other";
     };
   };
 
@@ -341,6 +482,16 @@ actor {
     manualPrices.get(key);
   };
 
+  // Suggest a market sector for a given NSE/BSE ticker
+  // Strips .NSE/.BSE suffix before matching; returns "Other" for unknown tickers
+  public query ({ caller }) func suggestSector(ticker : Text) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let base = stripTickerSuffix(ticker.toUpper());
+    lookupSector(base);
+  };
+
   public shared ({ caller }) func getInvestmentSuggestions(budget : Float, riskLevel : Text) : async [Asset] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can get investment suggestions");
@@ -423,16 +574,18 @@ actor {
     true;
   };
 
-  public shared ({ caller }) func addInvestment(stockName : Text, quantity : Float, buyPrice : Float) : async PortfolioEntry {
+  public shared ({ caller }) func addInvestment(stockName : Text, quantity : Float, buyPrice : Float, sector : Text) : async PortfolioEntry {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can add investments");
     };
+    let resolvedSector = if (sector == "") { "Other" } else { sector };
     let entry : PortfolioEntry = {
       id = currentId;
       stockName;
       quantity;
       buyPrice;
       addedAt = Time.now();
+      sector = resolvedSector;
     };
     let userPortfolio = getUserPortfolioInternal(caller);
     userPortfolio.add(entry);
@@ -463,5 +616,145 @@ actor {
       portfolio.add(caller, filteredPortfolio);
       true;
     };
+  };
+
+  // ─── Daily Insight helpers ──────────────────────────────────────────────────
+
+  // Derive a "YYYY-MM-DD" UTC date string from Time.now() nanoseconds
+  func nanosToDateString(nanos : Int) : Text {
+    let seconds : Int = nanos / 1_000_000_000;
+    // Days since Unix epoch
+    let days : Int = seconds / 86400;
+    // Gregorian calendar computation
+    var z : Int = days + 719468;
+    let era : Int = (if (z >= 0) z else z - 146096) / 146097;
+    let doe : Int = z - era * 146097;
+    let yoe : Int = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y : Int = yoe + era * 400;
+    let doy : Int = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp : Int = (5 * doy + 2) / 153;
+    let d : Int = doy - (153 * mp + 2) / 5 + 1;
+    let m : Int = mp + (if (mp < 10) 3 else -9);
+    let year : Int = y + (if (m <= 2) 1 else 0);
+
+    let yStr = year.toText();
+    let mStr = if (m < 10) { "0" # m.toText() } else { m.toText() };
+    let dStr = if (d < 10) { "0" # d.toText() } else { d.toText() };
+    yStr # "-" # mStr # "-" # dStr;
+  };
+
+  // Build the Gemini API request JSON body
+  func buildGeminiBody() : Text {
+    let prompt = "You are a financial advisor for Indian market beginners. Suggest ONE investment for today. "
+      # "Output ONLY valid JSON with no markdown, no explanation, just this structure: "
+      # "{\"ticker\":\"NIFTYBEES.NSE\",\"name\":\"Nippon India Nifty 50 BeES\","
+      # "\"reason\":\"Two sentence reason here.\",\"riskLevel\":\"Low\"} "
+      # "Rules: ticker must be NSE/BSE format (e.g. NIFTYBEES.NSE), "
+      # "name is the full fund/stock name, "
+      # "reason is max 2 sentences suitable for beginners, "
+      # "riskLevel is exactly one of: Low, Medium, High. "
+      # "Prefer index funds or ETFs for safety. Indian market focus only.";
+    "{\"contents\":[{\"parts\":[{\"text\":\"" # prompt # "\"}]}]}";
+  };
+
+  // Parse the insight JSON embedded in Gemini candidates[0].content.parts[0].text
+  // Handles both candidates and choices response shapes
+  func parseGeminiInsight(responseBody : Text, todayDate : Text) : DailyInsight {
+    // Try to find the text field from candidates[0].content.parts[0].text
+    let innerJson : Text = switch (extractJsonStringValue(responseBody, "text")) {
+      case (?t) { t };
+      case (null) { "" };
+    };
+    // Now parse the inner JSON for ticker, name, reason, riskLevel
+    let ticker = switch (extractJsonStringValue(innerJson, "ticker")) {
+      case (?t) { t };
+      case (null) { "NIFTYBEES.NSE" };
+    };
+    let name = switch (extractJsonStringValue(innerJson, "name")) {
+      case (?n) { n };
+      case (null) { "Nippon India Nifty 50 BeES" };
+    };
+    let reason = switch (extractJsonStringValue(innerJson, "reason")) {
+      case (?r) { r };
+      case (null) { "Tracks India's top 50 companies. A safe, diversified choice for long-term beginners." };
+    };
+    let riskLevel = switch (extractJsonStringValue(innerJson, "riskLevel")) {
+      case (?rl) { rl };
+      case (null) { "Low" };
+    };
+    {
+      ticker;
+      name;
+      reason;
+      riskLevel;
+      cachedDate = todayDate;
+      fetchedAt = Time.now();
+    };
+  };
+
+  // Hardcoded fallback insight when Gemini is unavailable
+  func fallbackInsight(todayDate : Text) : DailyInsight {
+    {
+      ticker = "NIFTYBEES.NSE";
+      name = "Nippon India Nifty 50 BeES";
+      reason = "Tracks India's top 50 companies via a single low-cost ETF, providing instant diversification. Ideal for beginners starting their long-term wealth creation journey.";
+      riskLevel = "Low";
+      cachedDate = todayDate;
+      fetchedAt = Time.now();
+    };
+  };
+
+  // Transform callback for the Gemini HTTP outcall
+  public query func transformDailyInsight(input : OutCall.TransformationInput) : async OutCall.TransformationOutput {
+    OutCall.transform(input);
+  };
+
+  // Fetch a fresh daily insight from Google Gemini
+  func fetchDailyInsightFromGemini(todayDate : Text) : async DailyInsight {
+    let geminiKey = "AIzaSyBqugHbeFVkVG_AmEcb_DTqI9lcC5NWmyo";
+    let url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" # geminiKey;
+    let body = buildGeminiBody();
+    let headers : [OutCall.Header] = [{ name = "Content-Type"; value = "application/json" }];
+    try {
+      let responseBody = await OutCall.httpPostRequest(url, headers, body, transformDailyInsight);
+      let insight = parseGeminiInsight(responseBody, todayDate);
+      // Validate ticker is non-empty, else fall back
+      if (insight.ticker == "") {
+        fallbackInsight(todayDate);
+      } else {
+        insight;
+      };
+    } catch (_) {
+      fallbackInsight(todayDate);
+    };
+  };
+
+  // ─── Public Daily Insight API ───────────────────────────────────────────────
+
+  // Returns one AI-generated daily investment suggestion.
+  // Cached globally for the full calendar day (UTC). No auth required.
+  public shared func getDailyInsight() : async DailyInsight {
+    let todayDate = nanosToDateString(Time.now());
+    if (dailyInsightDate == todayDate) {
+      switch (dailyInsightCache) {
+        case (?cached) { return cached };
+        case (null) {};
+      };
+    };
+    // Cache miss or stale date – fetch fresh from Gemini
+    let insight = await fetchDailyInsightFromGemini(todayDate);
+    dailyInsightCache := ?insight;
+    dailyInsightDate := todayDate;
+    insight;
+  };
+
+  // Clears the daily cache and fetches a fresh insight immediately.
+  // No auth required – anyone can trigger a manual refresh.
+  public shared func refreshDailyInsight() : async DailyInsight {
+    let todayDate = nanosToDateString(Time.now());
+    let insight = await fetchDailyInsightFromGemini(todayDate);
+    dailyInsightCache := ?insight;
+    dailyInsightDate := todayDate;
+    insight;
   };
 };

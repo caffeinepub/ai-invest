@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
+import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,22 +19,23 @@ import {
   Loader2,
   LogOut,
   Shield,
+  Sparkles,
   TrendingUp,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "./backend";
 import { UserRole } from "./backend.d";
+import { DailyInsightsScreen } from "./components/DailyInsightsScreen";
 import { HeroChart } from "./components/HeroChart";
 import { HistoryScreen } from "./components/HistoryScreen";
 import { LoginScreen } from "./components/LoginScreen";
 import { PortfolioScreen } from "./components/PortfolioScreen";
 import { type Suggestion, SuggestionCard } from "./components/SuggestionCard";
-import { useActor } from "./hooks/useActor";
-import { useInternetIdentity } from "./hooks/useInternetIdentity";
 
-type Tab = "home" | "portfolio" | "history";
+type Tab = "home" | "portfolio" | "history" | "dailyInsights";
 type Screen = "home" | "results";
 
 interface ResultState {
@@ -115,7 +117,7 @@ function HomeScreen({ onSubmit }: { onSubmit: (result: ResultState) => void }) {
   const [riskLevel, setRiskLevel] = useState("");
   const [budgetError, setBudgetError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
 
   const handleSubmit = async () => {
     setBudgetError("");
@@ -518,6 +520,7 @@ function BottomTabBar({
     { id: "home", label: "Home", icon: Home },
     { id: "portfolio", label: "Portfolio", icon: BarChart2 },
     { id: "history", label: "History", icon: History },
+    { id: "dailyInsights", label: "Insights", icon: Sparkles },
   ];
 
   return (
@@ -587,7 +590,7 @@ function InitializingScreen() {
 
 export default function App() {
   const { identity, isInitializing, clear } = useInternetIdentity();
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
 
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [screen, setScreen] = useState<Screen>("home");
@@ -652,6 +655,7 @@ export default function App() {
   const showResults = screen === "results" && result !== null;
   const showPortfolio = activeTab === "portfolio" && !showResults;
   const showHistory = activeTab === "history" && !showResults;
+  const showDailyInsights = activeTab === "dailyInsights" && !showResults;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -699,6 +703,17 @@ export default function App() {
           >
             <HistoryScreen />
           </motion.div>
+        ) : showDailyInsights ? (
+          <motion.div
+            key="dailyInsights"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex-1 flex flex-col"
+          >
+            <DailyInsightsScreen />
+          </motion.div>
         ) : (
           <motion.div
             key="home"
@@ -713,8 +728,8 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Footer — hidden on portfolio/history to keep layout clean with bottom nav */}
-      {!showPortfolio && !showHistory && (
+      {/* Footer — hidden on portfolio/history/insights to keep layout clean with bottom nav */}
+      {!showPortfolio && !showHistory && !showDailyInsights && (
         <footer className="border-t border-border/50 py-6 mt-8 pb-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">

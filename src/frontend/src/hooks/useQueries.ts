@@ -1,9 +1,10 @@
+import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Asset, PortfolioEntry, Query } from "../backend.d";
-import { useActor } from "./useActor";
+import { createActor } from "../backend";
+import type { Asset, DailyInsight, PortfolioEntry, Query } from "../backend.d";
 
 export function useQueryHistory() {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useActor(createActor);
   return useQuery<Query[]>({
     queryKey: ["queryHistory"],
     queryFn: async () => {
@@ -15,7 +16,7 @@ export function useQueryHistory() {
 }
 
 export function useGetInvestmentSuggestions() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   return useMutation<Asset[], Error, { budget: number; riskLevel: string }>({
     mutationFn: async ({ budget, riskLevel }) => {
       if (!actor) throw new Error("No actor available");
@@ -25,7 +26,7 @@ export function useGetInvestmentSuggestions() {
 }
 
 export function useGetInvestments() {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useActor(createActor);
   return useQuery<PortfolioEntry[]>({
     queryKey: ["investments"],
     queryFn: async () => {
@@ -37,16 +38,16 @@ export function useGetInvestments() {
 }
 
 export function useAddInvestment() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const queryClient = useQueryClient();
   return useMutation<
     PortfolioEntry,
     Error,
-    { stockName: string; quantity: number; buyPrice: number }
+    { stockName: string; quantity: number; buyPrice: number; sector: string }
   >({
-    mutationFn: async ({ stockName, quantity, buyPrice }) => {
+    mutationFn: async ({ stockName, quantity, buyPrice, sector }) => {
       if (!actor) throw new Error("No actor available");
-      return actor.addInvestment(stockName, quantity, buyPrice);
+      return actor.addInvestment(stockName, quantity, buyPrice, sector);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["investments"] });
@@ -55,7 +56,7 @@ export function useAddInvestment() {
 }
 
 export function useDeleteInvestment() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const queryClient = useQueryClient();
   return useMutation<boolean, Error, bigint>({
     mutationFn: async (id) => {
@@ -72,7 +73,7 @@ export function useDeleteInvestment() {
 // Returns undefined while loading, 0 if unavailable (invalid ticker / API error).
 // Auto-refreshes every 30 seconds to track real-time price changes.
 export function useGetStockPrice(ticker: string, enabled: boolean) {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useActor(createActor);
   return useQuery<number>({
     queryKey: ["stockPrice", ticker],
     queryFn: async () => {
@@ -91,7 +92,7 @@ export function useGetStockPrice(ticker: string, enabled: boolean) {
 
 // Save a manual price override for a ticker to the backend (persists across sessions)
 export function useSaveManualPrice() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const queryClient = useQueryClient();
   return useMutation<void, Error, { ticker: string; price: number }>({
     mutationFn: async ({ ticker, price }) => {
@@ -107,7 +108,7 @@ export function useSaveManualPrice() {
 
 // Clear a manual price override (restores live Alpha Vantage fetching)
 export function useClearManualPrice() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (ticker) => {
@@ -122,7 +123,7 @@ export function useClearManualPrice() {
 
 // Check if a ticker has a manual override saved on the backend
 export function useGetManualPrice(ticker: string, enabled: boolean) {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useActor(createActor);
   return useQuery<number | null>({
     queryKey: ["manualPrice", ticker],
     queryFn: async () => {
@@ -131,5 +132,52 @@ export function useGetManualPrice(ticker: string, enabled: boolean) {
     },
     enabled: !!actor && !isFetching && enabled && ticker.trim().length > 0,
     staleTime: 60 * 1000,
+  });
+}
+
+// Auto-suggest sector from a ticker symbol via the backend mapping.
+// Debounce usage is handled in the component; enabled=false disables the call.
+export function useSuggestSector(ticker: string, enabled: boolean) {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<string>({
+    queryKey: ["suggestSector", ticker],
+    queryFn: async () => {
+      if (!actor) return "Other";
+      return actor.suggestSector(ticker);
+    },
+    enabled: !!actor && !isFetching && enabled && ticker.trim().length > 0,
+    staleTime: 5 * 60 * 1000, // sector mapping is stable — cache 5 min
+    retry: false,
+  });
+}
+
+// Fetch today's daily AI investment insight.
+// staleTime: 0 so it always re-fetches on component mount.
+export function useGetDailyInsight() {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<DailyInsight>({
+    queryKey: ["dailyInsight"],
+    queryFn: async () => {
+      if (!actor) throw new Error("No actor available");
+      return actor.getDailyInsight();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+// Manually refresh the daily insight (calls backend to re-fetch from AI).
+export function useRefreshDailyInsight() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation<DailyInsight, Error, undefined>({
+    mutationFn: async () => {
+      if (!actor) throw new Error("No actor available");
+      return actor.refreshDailyInsight();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dailyInsight"] });
+    },
   });
 }

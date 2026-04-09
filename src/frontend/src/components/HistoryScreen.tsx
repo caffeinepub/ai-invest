@@ -12,12 +12,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActor } from "@caffeineai/core-infrastructure";
 import { ChevronDown, Clock, IndianRupee, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../backend";
 import type { Query } from "../backend.d";
-import { useActor } from "../hooks/useActor";
 
 const formatCurrencyINR = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -226,7 +227,7 @@ function HistorySkeletonCard() {
 }
 
 export function HistoryScreen() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [queries, setQueries] = useState<Query[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

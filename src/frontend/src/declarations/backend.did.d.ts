@@ -18,9 +18,18 @@ export interface Asset {
   'riskScore' : bigint,
   'reason' : string,
 }
+export interface DailyInsight {
+  'ticker' : string,
+  'fetchedAt' : bigint,
+  'name' : string,
+  'cachedDate' : string,
+  'riskLevel' : string,
+  'reason' : string,
+}
 export interface PortfolioEntry {
   'id' : bigint,
   'stockName' : string,
+  'sector' : string,
   'addedAt' : Time,
   'buyPrice' : number,
   'quantity' : number,
@@ -52,23 +61,36 @@ export interface http_request_result {
   'headers' : Array<http_header>,
 }
 export interface _SERVICE {
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'addInvestment' : ActorMethod<[string, number, number], PortfolioEntry>,
+  '_initializeAccessControl' : ActorMethod<[], undefined>,
+  'addInvestment' : ActorMethod<
+    [string, number, number, string],
+    PortfolioEntry
+  >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'clearManualPrice' : ActorMethod<[string], undefined>,
   'clearQueryHistory' : ActorMethod<[], boolean>,
   'deleteInvestment' : ActorMethod<[bigint], boolean>,
   'deleteQuery' : ActorMethod<[Time], boolean>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getDailyInsight' : ActorMethod<[], DailyInsight>,
   'getInvestmentSuggestions' : ActorMethod<[number, string], Array<Asset>>,
   'getInvestments' : ActorMethod<[], Array<PortfolioEntry>>,
+  'getManualPrice' : ActorMethod<[string], [] | [number]>,
   'getQueries' : ActorMethod<[bigint], Array<Query>>,
   'getQueryHistory' : ActorMethod<[], Array<Query>>,
   'getStockPrice' : ActorMethod<[string], number>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'refreshDailyInsight' : ActorMethod<[], DailyInsight>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'saveManualPrice' : ActorMethod<[string, number], undefined>,
+  'suggestSector' : ActorMethod<[string], string>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
+  'transformDailyInsight' : ActorMethod<
+    [TransformationInput],
+    TransformationOutput
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

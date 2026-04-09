@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { Loader2, Shield, TrendingUp, Zap } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 export function LoginScreen() {
   const { login, isLoggingIn, isInitializing, isLoginError, loginError } =

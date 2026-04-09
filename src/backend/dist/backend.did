@@ -1,0 +1,92 @@
+type http_request_result = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type http_header = 
+ record {
+   name: text;
+   value: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = record {name: text;};
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: http_request_result;
+ };
+type Time = int;
+type Query = 
+ record {
+   budget: float64;
+   riskLevel: text;
+   suggestions: vec Asset;
+   timestamp: Time;
+ };
+type PortfolioEntry = 
+ record {
+   addedAt: Time;
+   buyPrice: float64;
+   id: nat;
+   quantity: float64;
+   sector: text;
+   stockName: text;
+ };
+type DailyInsight = 
+ record {
+   cachedDate: text;
+   fetchedAt: int;
+   name: text;
+   reason: text;
+   riskLevel: text;
+   ticker: text;
+ };
+type Asset = 
+ record {
+   allocation: float64;
+   name: text;
+   reason: text;
+   riskScore: nat;
+   rupeeAmount: float64;
+   ticker: text;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  addInvestment: (stockName: text, quantity: float64, buyPrice: float64,
+   sector: text) -> (PortfolioEntry);
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  clearManualPrice: (ticker: text) -> ();
+  clearQueryHistory: () -> (bool);
+  deleteInvestment: (id: nat) -> (bool);
+  deleteQuery: (timestamp: Time) -> (bool);
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getDailyInsight: () -> (DailyInsight);
+  getInvestmentSuggestions: (budget: float64, riskLevel: text) -> (vec Asset);
+  getInvestments: () -> (vec PortfolioEntry) query;
+  getManualPrice: (ticker: text) -> (opt float64) query;
+  getQueries: (numQueries: nat) -> (vec Query) query;
+  getQueryHistory: () -> (vec Query) query;
+  getStockPrice: (ticker: text) -> (float64);
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  isCallerAdmin: () -> (bool) query;
+  refreshDailyInsight: () -> (DailyInsight);
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  saveManualPrice: (ticker: text, price: float64) -> ();
+  suggestSector: (ticker: text) -> (text) query;
+  transform: (input: TransformationInput) -> (TransformationOutput) query;
+  transformDailyInsight: (input: TransformationInput) ->
+   (TransformationOutput) query;
+}

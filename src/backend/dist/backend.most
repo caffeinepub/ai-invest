@@ -1,0 +1,90 @@
+// Version: 1.0.0
+type Asset__191761896 =
+  {
+    allocation : Float;
+    name : Text;
+    reason : Text;
+    riskScore : Nat;
+    rupeeAmount : Float;
+    ticker : Text
+  };
+type DailyInsight__942093380 =
+  {
+    cachedDate : Text;
+    fetchedAt : Int;
+    name : Text;
+    reason : Text;
+    riskLevel : Text;
+    ticker : Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Int__270357528 = Int__616954475;
+type Int__616954475 = Int;
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type PortfolioEntry__673464033 =
+  {
+    addedAt : Time__900049286;
+    buyPrice : Float;
+    id : Nat;
+    quantity : Float;
+    sector : Text;
+    stockName : Text
+  };
+type Query__939816792 =
+  {
+    budget : Float;
+    riskLevel : Text;
+    suggestions : [Asset__191761896];
+    timestamp : Time__900049286
+  };
+type Time__796480547 = Int__270357528;
+type Time__900049286 = Time__796480547;
+type UserProfile__491224006 = {name : Text};
+type UserRole__1054455867 = {#admin; #guest; #user};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable alphaVantageKey : Text;
+  stable var currentId : Nat;
+  stable var dailyInsightCache : ?DailyInsight__942093380;
+  stable var dailyInsightDate : Text;
+  stable manualPrices :
+    {var root : Node__46230540<Text, Float>; var size : Nat__490723111};
+  stable portfolio :
+    {
+      var root :
+        Node__46230540<Principal, List__415060402<PortfolioEntry__673464033>>;
+      var size : Nat__490723111
+    };
+  stable queries :
+    {
+      var root : Node__46230540<Principal, List__415060402<Query__939816792>>;
+      var size : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    }
+};

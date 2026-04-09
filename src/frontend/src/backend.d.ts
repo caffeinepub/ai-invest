@@ -24,6 +24,14 @@ export interface TransformationOutput {
     headers: Array<http_header>;
 }
 export type Time = bigint;
+export interface DailyInsight {
+    ticker: string;
+    fetchedAt: bigint;
+    name: string;
+    cachedDate: string;
+    riskLevel: string;
+    reason: string;
+}
 export interface TransformationInput {
     context: Uint8Array;
     response: http_request_result;
@@ -39,6 +47,7 @@ export interface Asset {
 export interface PortfolioEntry {
     id: bigint;
     stockName: string;
+    sector: string;
     addedAt: Time;
     buyPrice: number;
     quantity: number;
@@ -56,7 +65,7 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    addInvestment(stockName: string, quantity: number, buyPrice: number): Promise<PortfolioEntry>;
+    addInvestment(stockName: string, quantity: number, buyPrice: number, sector: string): Promise<PortfolioEntry>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     clearManualPrice(ticker: string): Promise<void>;
     clearQueryHistory(): Promise<boolean>;
@@ -64,6 +73,7 @@ export interface backendInterface {
     deleteQuery(timestamp: Time): Promise<boolean>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getDailyInsight(): Promise<DailyInsight>;
     getInvestmentSuggestions(budget: number, riskLevel: string): Promise<Array<Asset>>;
     getInvestments(): Promise<Array<PortfolioEntry>>;
     getManualPrice(ticker: string): Promise<number | null>;
@@ -72,7 +82,10 @@ export interface backendInterface {
     getStockPrice(ticker: string): Promise<number>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    refreshDailyInsight(): Promise<DailyInsight>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     saveManualPrice(ticker: string, price: number): Promise<void>;
+    suggestSector(ticker: string): Promise<string>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
+    transformDailyInsight(input: TransformationInput): Promise<TransformationOutput>;
 }
